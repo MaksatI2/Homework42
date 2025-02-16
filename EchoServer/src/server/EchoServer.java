@@ -23,13 +23,11 @@ public class EchoServer {
             System.out.println("Сервер запущен на порту " + port);
             while (!server.isClosed()) {
                 Socket socket = server.accept();
-                System.out.println("Клиент подключился.");
                 ClientHandler clientHandler = new ClientHandler(socket, this);
                 clients.add(clientHandler);
-                new Thread(clientHandler).run();
+                new Thread(clientHandler).start();
             }
         } catch (IOException e) {
-            System.out.printf("Ошибка: порт %d занят.%n", port);
             e.printStackTrace();
         }
     }
@@ -42,8 +40,34 @@ public class EchoServer {
         }
     }
 
+    public void sendPrivateMessage(String recipientName, String sender, String message) {
+        for (ClientHandler client : clients) {
+            if (client.getUsername().equalsIgnoreCase(recipientName)) {
+                client.sendMessage("(Сообщение от " + sender + "): " + message);
+                return;
+            }
+        }
+    }
+
+    public boolean isUsernameTaken(String newName) {
+        return clients.stream().anyMatch(client -> client.getUsername().equalsIgnoreCase(newName));
+    }
+
+    public void notifyNameChange(String oldName, String newName) {
+        for (ClientHandler client : clients) {
+            client.sendMessage("Пользователь " + oldName + " теперь известен как " + newName);
+        }
+    }
+
     public void removeClient(ClientHandler clientHandler) {
         clients.remove(clientHandler);
-        System.out.println("Клиент отключен: " + clientHandler.getUsername());
+    }
+
+    public String getClientList() {
+        StringBuilder sb = new StringBuilder("Подключенные пользователи: ");
+        for (ClientHandler client : clients) {
+            sb.append(client.getUsername()).append(", ");
+        }
+        return sb.toString().replaceAll(", $", "");
     }
 }
