@@ -26,7 +26,6 @@ public class ClientHandler implements Runnable {
                 if (isEmptyMsg(message) || isQuitMsg(message)) {
                     break;
                 }
-                sendResponse(message.toUpperCase(), writer);
             }
         } catch (NoSuchElementException ex) {
             System.out.println("Клиент закрыл соединение!");
