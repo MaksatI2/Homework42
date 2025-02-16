@@ -9,7 +9,7 @@ import java.util.Scanner;
 public class ClientHandler implements Runnable {
     private final Socket socket;
     private final EchoServer server;
-    private final String username;
+    private String username;
     private PrintWriter writer;
 
     public ClientHandler(Socket socket, EchoServer server) {
@@ -20,8 +20,6 @@ public class ClientHandler implements Runnable {
 
     @Override
     public void run() {
-        System.out.printf("Подключен клиент (%s): %s%n", username, socket);
-
         try (socket;
              Scanner reader = getReader(socket)) {
 
@@ -33,14 +31,42 @@ public class ClientHandler implements Runnable {
                 if (isEmptyMsg(message) || isQuitMsg(message)) {
                     break;
                 }
-                server.broadcastMessage(username, message, this);
+                handleMessage(message);
             }
         } catch (NoSuchElementException ex) {
-            System.out.println("Клиент закрыл соединение: " + username);
+            System.out.println("Клиент отключился: " + username);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             server.removeClient(this);
+        }
+    }
+
+    private void handleMessage(String message) {
+        if (message.startsWith("/name ")) {
+            changeUsername(message.substring(6).trim());
+        } else if (message.equals("/list")) {
+            sendMessage(server.getClientList());
+        } else if (message.startsWith("/whisper ")) {
+            String[] parts = message.split(" ", 3);
+            if (parts.length < 3) {
+                sendMessage("Ошибка: Используйте /whisper имя сообщение");
+                return;
+            }
+            server.sendPrivateMessage(parts[1], username, parts[2]);
+        } else {
+            server.broadcastMessage(username, message, this);
+        }
+    }
+
+    private void changeUsername(String newName) {
+        if (newName.contains(" ") || server.isUsernameTaken(newName)) {
+            sendMessage("Ошибка: Имя недоступно.");
+        } else {
+            String oldName = this.username;
+            this.username = newName;
+            sendMessage("Вы теперь известны как " + newName);
+            server.notifyNameChange(oldName, newName);
         }
     }
 
@@ -62,7 +88,7 @@ public class ClientHandler implements Runnable {
 
     private static String generateRandomUsername() {
         String[] names =
-                {"User1", "User2", "User3", "User4", "User5" , "User6", "User7"};
+                {"User1", "User2", "User3", "User4", "User5", "User6", "User7"};
         return names[new Random().nextInt(names.length)];
     }
 
