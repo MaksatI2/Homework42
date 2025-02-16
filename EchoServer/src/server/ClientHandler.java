@@ -3,37 +3,45 @@ package server;
 import java.io.*;
 import java.net.Socket;
 import java.util.NoSuchElementException;
+import java.util.Random;
 import java.util.Scanner;
 
 public class ClientHandler implements Runnable {
     private final Socket socket;
+    private final EchoServer server;
+    private final String username;
+    private PrintWriter writer;
 
-    public ClientHandler(Socket socket) {
+    public ClientHandler(Socket socket, EchoServer server) {
         this.socket = socket;
+        this.server = server;
+        this.username = generateRandomUsername();
     }
 
     @Override
     public void run() {
-        System.out.printf("Подключен клиент: %s%n", socket);
+        System.out.printf("Подключен клиент (%s): %s%n", username, socket);
 
         try (socket;
-             Scanner reader = getReader(socket);
-             PrintWriter writer = getWriter(socket)) {
-            sendResponse("Привет " + socket, writer);
+             Scanner reader = getReader(socket)) {
+
+            writer = getWriter(socket);
+            sendMessage("Добро пожаловать, " + username + "!");
 
             while (true) {
                 String message = reader.nextLine();
                 if (isEmptyMsg(message) || isQuitMsg(message)) {
                     break;
                 }
+                server.broadcastMessage(username, message, this);
             }
         } catch (NoSuchElementException ex) {
-            System.out.println("Клиент закрыл соединение!");
+            System.out.println("Клиент закрыл соединение: " + username);
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            server.removeClient(this);
         }
-
-        System.out.printf("Клиент отключен: %s%n", socket);
     }
 
     private static PrintWriter getWriter(Socket socket) throws IOException {
@@ -52,8 +60,17 @@ public class ClientHandler implements Runnable {
         return message == null || message.isBlank();
     }
 
-    private static void sendResponse(String response, Writer writer) throws IOException {
-        writer.write(response + System.lineSeparator());
-        writer.flush();
+    private static String generateRandomUsername() {
+        String[] names =
+                {"User1", "User2", "User3", "User4", "User5" , "User6", "User7"};
+        return names[new Random().nextInt(names.length)];
+    }
+
+    public void sendMessage(String message) {
+        writer.println(message);
+    }
+
+    public String getUsername() {
+        return username;
     }
 }
