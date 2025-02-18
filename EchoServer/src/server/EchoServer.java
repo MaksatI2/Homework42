@@ -31,7 +31,6 @@ public class EchoServer {
             e.printStackTrace();
         }
     }
-
     public void broadcastMessage(String sender, String message, ClientHandler senderClient) {
         for (ClientHandler client : clients) {
             if (client != senderClient) {
@@ -55,10 +54,11 @@ public class EchoServer {
 
     public void notifyNameChange(String oldName, String newName) {
         for (ClientHandler client : clients) {
-            client.sendMessage("Пользователь " + oldName + " теперь известен как " + newName);
+            if (!client.getUsername().equalsIgnoreCase(newName)) {
+                client.sendMessage("Пользователь " + oldName + " теперь известен как " + newName);
+            }
         }
     }
-
     public void removeClient(ClientHandler clientHandler) {
         clients.remove(clientHandler);
     }
