@@ -33,6 +33,8 @@ public class ClientHandler implements Runnable {
                 }
                 handleMessage(message);
             }
+
+            server.broadcastMessage(username , "покинул чат...", null);
         } catch (NoSuchElementException ex) {
             System.out.println("Клиент отключился: " + username);
         } catch (IOException e) {
